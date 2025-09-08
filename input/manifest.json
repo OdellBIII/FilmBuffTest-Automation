@@ -1,0 +1,31 @@
+{
+    "first_hint": {
+        "caption": "cinephile\nlevel\nhints",
+        "image_paths": [
+            "input/img/cutting_class.png",
+            "input/img/a_stoning_in_fulham_county.png",
+            "input/img/california_hunk.png"
+        ]
+    },
+    "second_hint": {
+        "caption": "average movie\nenjoyer level\nhints",
+        "image_paths": [
+            "input/img/babylon.png",
+            "input/img/deadpool_2.png",
+            "input/img/12_years_a_slave.png"
+        ]
+    },
+    "third_hint": {
+        "caption": "culturally inept\nlevel\nhints",
+        "image_paths": [
+            "input/img/mr_and_mrs_smith.png",
+            "input/img/moneyball.png",
+            "input/img/fight_club.png"
+        ]
+    },
+    "answer": {
+        "caption": "Brad Pitt",
+        "image_path": "input/img/brad_pitt.png"
+    },
+    "background_audio": "input/audio/background_audio.mp3"
+}
