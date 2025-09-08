@@ -1,16 +1,26 @@
 # Cinephile Tiktok Automation
-This tool automates the process of creating cinephile quiz tiktok videos
+This tool automates the process of creating FilmBuffTest tiktok videos
 ## Installation
-- Install docker
-### Build the image
-Build from main
-`docker build -t cinephile-automator-image .`
-Modify the manifest
-Modify the manifest to include the images and audios you want. Put all files in the audio or img directories
-Run the container
-`docker run --rm -v ./input:/app/input -v ./output:/app/output --name cinephile-automator cinephile-automator-image`
-The resulting video will be found in output
+1. Install [pyenv](https://github.com/pyenv/pyenv?tab=readme-ov-file#installation) for your OS
+2. Install python 3.9 with pyenv and set it as local default
+`pyenv install 3.9 && pyenv local 3.9`
+3. Install virtualenv
+`pip install --user virtualenv`
+4. Create virtualenv
+`virtualenv venv`
+5. Activate the virtual environment
+`source venv/bin/activate`
+6. Install dependencies
+`pip install -r requirements.txt`
+## Usage
+1. Move all images to `input/img` directory
+2. Move all audio files to `input/audio` directory
+3. Edit manifest to have the correct file path and names. The order in which the images
+are listed in the file will be the order they appear in the video.
+4. Activate the virtual environment if not activated already
+`source venv/bin/activate`
+5. Run the script `python main.py`
+6. Wait for the video to complete (should take ~10 minutes depending on hardware) and the file should be in `output/output_video.mp4`
+ 
 ## Ideas?
-- Modify the json file format to include subtitles and only list movies on screen from those sections
 - Add voice clips for the text
-- Add background music files
