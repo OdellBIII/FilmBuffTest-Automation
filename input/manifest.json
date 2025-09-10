@@ -1,31 +1,32 @@
 {
     "first_hint": {
-        "caption": "cinephile\nlevel\nhints",
+        "caption": "Cinephile\nLevel\nHints",
         "image_paths": [
-            "input/img/cutting_class.png",
-            "input/img/a_stoning_in_fulham_county.png",
-            "input/img/california_hunk.png"
+            "input/img/asteroid_city.jpg",
+            "input/img/peter_rabbit.jpg",
+            "input/img/about_time.jpg"
         ]
     },
     "second_hint": {
-        "caption": "average movie\nenjoyer level\nhints",
+        "caption": "Average Movie\nEnjoyer Level\nHints",
         "image_paths": [
-            "input/img/babylon.png",
-            "input/img/deadpool_2.png",
-            "input/img/12_years_a_slave.png"
+            "input/img/dreamland.jpg",
+            "input/img/mary_queen_of_scots.jpg",
+            "input/img/i_tonya.jpg"
         ]
     },
     "third_hint": {
-        "caption": "culturally inept\nlevel\nhints",
+        "caption": "Culturally Inept\nLevel\nHints",
         "image_paths": [
-            "input/img/mr_and_mrs_smith.png",
-            "input/img/moneyball.png",
-            "input/img/fight_club.png"
+            "input/img/wolf_of_wall_street.jpg",
+            "input/img/the_suicide_squad.avif",
+            "input/img/barbie.jpg"
         ]
     },
     "answer": {
-        "caption": "Brad Pitt",
-        "image_path": "input/img/brad_pitt.png"
+        "caption": "Margot Robbie",
+        "image_path": "input/img/margot_robbie.avif"
     },
-    "background_audio": "input/audio/background_audio.mp3"
+    "background_audio": "input/audio/background_audio.mp3",
+    "background_video": "input/video/background.mp4"
 }

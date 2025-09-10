@@ -1,6 +1,7 @@
 import sys
 import json
-from moviepy import ImageClip, CompositeVideoClip, TextClip, ColorClip, concatenate_videoclips, AudioFileClip
+from moviepy import ImageClip, CompositeVideoClip, TextClip, ColorClip, concatenate_videoclips, AudioFileClip, VideoFileClip 
+from moviepy.video.fx import Loop
 import numpy as np
 
 black = (0, 0, 0)
@@ -11,7 +12,7 @@ class ThreeColumnClip:
         self.image_paths = image_paths
         self.size = size
     
-def create_title_card(text, video_size, duration=3, fontsize=70, color='white', bg_color=black):
+def create_title_card(text, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None):
     """
     Creates a title card clip with specified text.
     
@@ -28,8 +29,13 @@ def create_title_card(text, video_size, duration=3, fontsize=70, color='white', 
     """
     
     # Create a background color clip
-    bg_clip = ColorClip(size=video_size, color=bg_color).with_duration(duration)
-    
+    bg_clip = None
+    if bg_video_path:
+        bg_clip = VideoFileClip(bg_video_path, target_resolution=video_size)
+        bg_clip = Loop(duration=duration).apply(bg_clip)
+    else:
+        bg_clip = ColorClip(size=video_size, color=bg_color).with_duration(duration)
+
     # Create a text clip
     txt_clip = (TextClip(text=text, font_size=fontsize,
                          color=color, size=video_size,
@@ -39,11 +45,11 @@ def create_title_card(text, video_size, duration=3, fontsize=70, color='white', 
                 .with_position('center'))
     
     # Composite the text over the background
-    title_card = CompositeVideoClip([bg_clip, txt_clip], size=video_size)
+    title_card = CompositeVideoClip([bg_clip, txt_clip], size=video_size, use_bgclip=True)
     
     return title_card
 
-def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3, fontsize=70, color='white', bg_color=black):
+def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None):
     """
     Creates an answer clip with specified text and actor headshot.
     
@@ -60,7 +66,12 @@ def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3,
         CompositeVideoClip: A MoviePy CompositeVideoClip representing the answer clip
     """
     # Create a background color clip
-    bg_clip = ColorClip(size=video_size, color=bg_color).with_duration(duration)
+    bg_clip = None
+    if bg_video_path:
+        bg_clip = VideoFileClip(bg_video_path, target_resolution=video_size)
+        bg_clip = Loop(duration=duration).apply(bg_clip)
+    else:
+        bg_clip = ColorClip(size=video_size, color=bg_color).with_duration(duration)
 
     # Create a text clip
     txt_clip = (TextClip(text=answer_text, font_size=fontsize,
@@ -74,12 +85,12 @@ def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3,
     headshot_clip = ImageClip(actor_headshot_path).with_duration(duration).with_position(('center', 'center'))
 
     # Composite the text and headshot over the background
-    answer_clip = CompositeVideoClip([bg_clip, txt_clip, headshot_clip], size=video_size)
+    answer_clip = CompositeVideoClip([bg_clip, txt_clip, headshot_clip], size=video_size, use_bgclip=True)
 
     return answer_clip
 
 def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_time=0, 
-                            video_size=(1920, 1080), fps=30):
+                            video_size=(1920, 1080), fps=30, bg_video_path=None):
     """
     Creates a video where 3 images appear fullscreen then shrink to form a 1 x 3 grid.
     Compatible with MoviePy v2.0+
@@ -106,18 +117,28 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
         x = 1 * cell_width
         y = row * cell_height
         grid_positions.append((x, y))
-    
+
+    bg_clip = None
+    target_duration = 5 + len(three_column_clip.image_paths) * 4.0  # 5 seconds for title + 4 seconds per image
+    #target_duration = 60
+    if bg_video_path:
+        bg_clip = VideoFileClip(bg_video_path, target_resolution=video_size)
+        bg_clip = Loop(duration=target_duration).apply(bg_clip)
+    else:
+        bg_clip = ColorClip(size=video_size, color=black).with_duration(target_duration)
+
     clips = []
     current_time = 0
+    clips.append(bg_clip)
 
     # Append a title card
     title_clip = create_title_card(
         three_column_clip.caption,
         video_size=video_size,
         duration=5, fontsize=140,
-        color='white', bg_color=black
+        color='white', bg_video_path=bg_video_path
     ) 
-    clips.insert(0, title_clip)
+    clips.append(title_clip)
     current_time += 5  # Add title duration to current time
     
     for i, image_path in enumerate(three_column_clip.image_paths):
@@ -209,7 +230,7 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
         current_time += 4.0  # Each image takes 3 seconds total (1.5 + 1.5)
 
     # Create final composite video
-    final_video = CompositeVideoClip(clips, size=video_size)
+    final_video = CompositeVideoClip(clips, size=video_size, use_bgclip=True)
     final_video = final_video.with_duration(current_time)
 
     return final_video
@@ -225,14 +246,17 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
         data = json.load(f)
     if not isinstance(data, dict):
         raise ValueError("JSON file must contain a dictionary with captions as keys and lists of image paths as values")
-    
+
+    # Get background video path if provided
+    background_video_path = data["background_video"]
+
     clips = []
     current_time = 0
     title_clip = create_title_card(
         "Can you\n guess this\n actor from\n only their\n films?",
         video_size=video_size,
         duration=5, fontsize=140,
-        color='white', bg_color=black
+        color='white', bg_color=black, bg_video_path=background_video_path
     )
     clips.append(title_clip)
     current_time += title_clip.duration  # Add title duration to current time
@@ -250,7 +274,7 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
             raise ValueError("Each caption must have exactly 3 image paths")
 
         three_column_clip = ThreeColumnClip(caption, image_paths, video_size)
-        hint_clip = create_column_animation_clip(three_column_clip, current_time, video_size, fps)
+        hint_clip = create_column_animation_clip(three_column_clip, current_time, video_size, fps, bg_video_path=background_video_path)
         clips.append(hint_clip)
         current_time += hint_clip.duration
 
@@ -258,14 +282,14 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
         "The answer is ...",
         video_size=video_size,
         duration=3, fontsize=140,
-        color='white', bg_color=black
+        color='white', bg_color=black, bg_video_path=background_video_path
     )
     clips.append(the_answer_is_clip)
     current_time += the_answer_is_clip.duration
 
     # Append answer clip
     answer = data["answer"]
-    answer_clip = create_answer_clip(answer["caption"], answer["image_path"], video_size, duration=5, fontsize=70, color='white', bg_color=black)
+    answer_clip = create_answer_clip(answer["caption"], answer["image_path"], video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path)
     clips.append(answer_clip)
     current_time += answer_clip.duration
 
@@ -314,7 +338,20 @@ if __name__ == "__main__":
         manifest_file = "input/manifest.json"
     
     try:
-
+        #create_column_animation_clip(
+        #    ThreeColumnClip(
+        #        caption="Sample Caption",
+        #        image_paths=[
+        #            "input/img/babylon.png",
+        #            "input/img/moneyball.png",
+        #            "input/img/cutting_class.png"
+        #        ],
+        #        size=(1080, 1920)
+        #    ),
+        #    video_size=(1080, 1920),
+        #    fps=30,
+        #    bg_video_path="input/video/background.mp4"
+        #).write_videofile("output/sample_column_animation.mp4", fps=30, codec='libx264', threads=4)
         create_tiktok_from_json(
             json_file_path=manifest_file,
             output_video_path="output/output_video.mp4",
@@ -322,8 +359,8 @@ if __name__ == "__main__":
             fps=30
         )
 
-    except FileNotFoundError:
-        print("JSON file not found. Creating sample JSON file...")
+    except FileNotFoundError as fnfe:
+        print(f"File not found: {fnfe}")
         create_sample_json("images.json")
         print("Please update the image paths in 'images.json' and run the script again.")
     except Exception as e:
