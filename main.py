@@ -90,7 +90,7 @@ def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3,
                 .with_position(('center', -500)))
 
     # Load actor headshot image
-    headshot_clip = ImageClip(actor_headshot_path).with_duration(duration).with_position(('center', 'center'))
+    headshot_clip = ImageClip(actor_headshot_path).with_duration(duration).with_position(('center', 'center')).resized(height=600)
 
     # Composite the text and headshot over the background
     answer_clip = CompositeVideoClip([bg_clip, txt_clip, headshot_clip], size=video_size, use_bgclip=True)
@@ -353,7 +353,6 @@ if __name__ == "__main__":
             video_size=(1080, 1920),
             fps=30
         )
-
     except FileNotFoundError as fnfe:
         print(f"File not found: {fnfe}")
     except Exception as e:
