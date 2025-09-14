@@ -1,15 +1,23 @@
 import sys
+import os
 import json
 from moviepy import ImageClip, CompositeVideoClip, TextClip, ColorClip, concatenate_videoclips, AudioFileClip, VideoFileClip 
 from moviepy.video.fx import Loop
-import numpy as np
+from MoviePosterFinder.OMDBClient import OMDBClient
 
 black = (0, 0, 0)
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+
+class Movie:
+    def __init__(self, title, poster_path=None, release_year=None):
+        self.title = title
+        self.poster_path = poster_path
+        self.release_year = release_year
 
 class ThreeColumnClip:
-    def __init__(self, caption, image_paths, size):
+    def __init__(self, caption, movies, size):
         self.caption = caption
-        self.image_paths = image_paths
+        self.movies = movies
         self.size = size
     
 def create_title_card(text, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None):
@@ -102,8 +110,8 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
         fps (int): Frames per second
     """
 
-    if not isinstance(three_column_clip.image_paths, list) or len(three_column_clip.image_paths) != 3:
-        raise ValueError("Three column clip must contain an array of exactly 3 image paths")
+    if not isinstance(three_column_clip.movies, list) or len(three_column_clip.movies) != 3:
+        raise ValueError("Three column clip must contain an array of exactly 3 movie objects")
 
     video_width, video_height = video_size
     
@@ -119,7 +127,7 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
         grid_positions.append((x, y))
 
     bg_clip = None
-    target_duration = 5 + len(three_column_clip.image_paths) * 4.0  # 5 seconds for title + 4 seconds per image
+    target_duration = 5 + len(three_column_clip.movies) * 4.0  # 5 seconds for title + 4 seconds per movie
     #target_duration = 60
     if bg_video_path:
         bg_clip = VideoFileClip(bg_video_path, target_resolution=video_size)
@@ -140,11 +148,10 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
     ) 
     clips.append(title_clip)
     current_time += 5  # Add title duration to current time
-    
-    for i, image_path in enumerate(three_column_clip.image_paths):
+
+    for i, movie in enumerate(three_column_clip.movies):
         # Load image
-        img_clip = ImageClip(image_path)
-        
+        img_clip = ImageClip(movie.poster_path)
         # Phase 1: Fullscreen display (1.5 seconds)
         # Resize to cover full screen while maintaining aspect ratio
         fullscreen_clip = img_clip.resized(height=video_height).with_position('center')
@@ -265,15 +272,35 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
             continue
 
         print(hint)
-        if not isinstance(hint, dict) or "caption" not in hint or "image_paths" not in hint:
-            raise ValueError("Each hint must be a dictionary with 'caption' and 'image_paths' keys")
+        if not isinstance(hint, dict) or "caption" not in hint or "movies" not in hint:
+            raise ValueError("Each hint must be a dictionary with 'caption' and 'movies' keys")
 
         caption = hint["caption"]
-        image_paths = hint["image_paths"]
-        if not isinstance(image_paths, list) or len(image_paths) != 3:
-            raise ValueError("Each caption must have exactly 3 image paths")
+        movie_data = hint["movies"]
+        if not isinstance(movie_data, list) or len(movie_data) != 3:
+            raise ValueError("Each caption must have exactly 3 movie data entries")
 
-        three_column_clip = ThreeColumnClip(caption, image_paths, video_size)
+        movies = []
+        # Check that each movie datum is a dict with 'title' and optional 'poster_path'
+        # If 'poster_path' is missing, use OMDBClient to download the poster
+        for movie_datum in movie_data:
+            if not isinstance(movie_datum, dict) or "title" not in movie_datum:
+                raise ValueError("Each movie data entry must be a dictionary with at least a 'title' key")
+            title = movie_datum["title"]
+            poster_path = movie_datum.get("poster_path")
+            release_year = movie_datum.get("release_year")
+            if not poster_path:
+                # Download poster using OMDBClient
+                omdb_client = OMDBClient(api_key=OMDB_API_KEY)
+                try:
+                    poster_path = omdb_client.download_movie_poster(title, save_path=f"input/img/{title.replace(' ', '_')}.jpg", release_year=release_year)
+                except Exception as e:
+                    print(f"Error downloading poster for '{title}': {e}")
+                    poster_path = "input/img/placeholder.jpg"
+
+            movies.append(Movie(title=title, poster_path=poster_path, release_year=release_year))
+
+        three_column_clip = ThreeColumnClip(caption, movies, video_size)
         hint_clip = create_column_animation_clip(three_column_clip, current_time, video_size, fps, bg_video_path=background_video_path)
         clips.append(hint_clip)
         current_time += hint_clip.duration
@@ -306,52 +333,20 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
     print(f"Video created successfully: {output_video_path}")
     print(f"Total duration: {current_time} seconds")
 
-def create_sample_json(json_path="images.json"):
-    """
-    Creates a sample JSON file with placeholder image paths.
-    Replace these paths with your actual image file paths.
-    """
-    sample_images = [
-        "image1.jpg",
-        "image2.jpg", 
-        "image3.jpg",
-        "image4.jpg",
-        "image5.jpg",
-        "image6.jpg",
-        "image7.jpg",
-        "image8.jpg",
-        "image9.jpg"
-    ]
-    
-    with open(json_path, 'w') as f:
-        json.dump(sample_images, f, indent=2)
-    
-    print(f"Sample JSON file created: {json_path}")
-    print("Please update the image paths in the JSON file with your actual image file paths.")
-
-
 if __name__ == "__main__":
     # Example usage
     if sys.argv and len(sys.argv) > 1:
         manifest_file = sys.argv[1]
     else:
         manifest_file = "input/manifest.json"
-    
+
+    # Check for required environment variables
+    required_env_vars = ["OMDB_API_KEY"]
+    for var in required_env_vars:
+        if var not in os.environ:
+            raise ValueError(f"Missing required environment variable: {var}")
+
     try:
-        #create_column_animation_clip(
-        #    ThreeColumnClip(
-        #        caption="Sample Caption",
-        #        image_paths=[
-        #            "input/img/babylon.png",
-        #            "input/img/moneyball.png",
-        #            "input/img/cutting_class.png"
-        #        ],
-        #        size=(1080, 1920)
-        #    ),
-        #    video_size=(1080, 1920),
-        #    fps=30,
-        #    bg_video_path="input/video/background.mp4"
-        #).write_videofile("output/sample_column_animation.mp4", fps=30, codec='libx264', threads=4)
         create_tiktok_from_json(
             json_file_path=manifest_file,
             output_video_path="output/output_video.mp4",
@@ -361,7 +356,5 @@ if __name__ == "__main__":
 
     except FileNotFoundError as fnfe:
         print(f"File not found: {fnfe}")
-        create_sample_json("images.json")
-        print("Please update the image paths in 'images.json' and run the script again.")
     except Exception as e:
         print(f"Error: {e}")

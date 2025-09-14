@@ -1,0 +1,32 @@
+{
+    "first_hint": {
+        "caption": "Cinephile\nLevel\nHints",
+        "image_paths": [
+            "input/img/kapitan_corelli.jpg",
+            "input/img/reign_of_fire.jpeg",
+            "input/img/the_new_world.jpg"
+        ]
+    },
+    "second_hint": {
+        "caption": "Average Movie\nEnjoyer Level\nHints",
+        "image_paths": [
+            "input/img/the_boy_and_the_heron.jpg",
+            "input/img/thor_love_and_thunder.jpg",
+            "input/img/shaft.webp"
+        ]
+    },
+    "third_hint": {
+        "caption": "Culturally Inept\nLevel\nHints",
+        "image_paths": [
+            "input/img/thor_love_and_thunder.jpg",
+            "input/img/the_dark_knight.jpg",
+            "input/img/vice.jpg"
+        ]
+    },
+    "answer": {
+        "caption": "Christian Bale",
+        "image_path": "input/img/christian_bale.jpeg"
+    },
+    "background_audio": "input/audio/background_audio.mp3",
+    "background_video": "input/video/background.mp4"
+}
