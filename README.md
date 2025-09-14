@@ -12,6 +12,8 @@ This tool automates the process of creating FilmBuffTest tiktok videos
 `source venv/bin/activate`
 6. Install dependencies
 `pip install -r requirements.txt`
+7. Export OMDB API key
+`export OMDB_API_KEY=<OMDB_API_KEY>`
 ## Usage
 1. Move all images to `input/img` directory
 2. Move all audio files to `input/audio` directory
