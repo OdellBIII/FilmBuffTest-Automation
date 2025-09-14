@@ -1,3 +1,5 @@
 output/*.mp4
 input/img/*
 input/manifest.json
+.DS*
+bits_and_pieces/*
