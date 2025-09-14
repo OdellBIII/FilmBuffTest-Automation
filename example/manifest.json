@@ -3,7 +3,9 @@
         "caption": "Cinephile\nLevel\nHints",
         "movies": [
             {
-                "title": "The Phoenician Scheme"
+                "title": "The Phoenician Scheme",
+                "poster_path": "input/img/the_phoenician_scheme.jpg",
+                "release_year": "2023"
             },
             {
                 "title": "Asteroid City"
@@ -17,34 +19,21 @@
         "caption": "Average Movie\nEnjoyer Level\nHints",
         "movies": [
             {
-                "title": "Toy Story"
+                "title": "The Phoenician Scheme",
+                "poster_path": "input/img/the_phoenician_scheme.jpg",
+                "release_year": "2023"
             },
             {
-                "title": "The Polar Express"
+                "title": "Asteroid City"
             },
             {
-                "title": "Pinocchio",
-                "release_year": "2022"
-            }
-        ]
-    },
-    "third_hint": {
-        "caption": "Culturally Inept\nLevel\nHints",
-        "movies": [
-            {
-                "title": "Sleepless in Seattle"
-            },
-            {
-                "title": "Big"
-            },
-            {
-                "title": "Forrest Gump"
+                "title": "Saving Private Ryan"
             }
         ]
     },
     "answer": {
-        "caption": "Tom Hanks",
-        "image_path": "input/img/tom_hanks.jpg"
+        "caption": "Christian Bale",
+        "image_path": "input/img/christian_bale.jpeg"
     },
     "background_audio": "input/audio/background_audio.mp3",
     "background_video": "input/video/background.mp4"
