@@ -21,6 +21,49 @@ are listed in the file will be the order they appear in the video.
 `source venv/bin/activate`
 5. Run the script `python main.py`
 6. Wait for the video to complete (should take ~10 minutes depending on hardware) and the file should be in `output/output_video.mp4`
- 
+
+## Config file 
+```
+{
+    "first_hint": {
+        "caption": "Cinephile\nLevel\nHints",
+        "movies": [
+            {
+                "title": "The Phoenician Scheme",
+                "poster_path": "input/img/the_phoenician_scheme.jpg", // Optional field. Poster can be automatically downloaded
+                "release_year": "2023" // Optional field, but it is required if you need a particular movie from a specific year (think remakes)
+            },
+            {
+                "title": "Asteroid City"
+            },
+            {
+                "title": "Saving Private Ryan"
+            }
+        ]
+    },
+    "second_hint": {
+        "caption": "Average Movie\nEnjoyer Level\nHints",
+        "movies": [
+            {
+                "title": "The Phoenician Scheme",
+                "poster_path": "input/img/the_phoenician_scheme.jpg",
+                "release_year": "2023"
+            },
+            {
+                "title": "Asteroid City"
+            },
+            {
+                "title": "Saving Private Ryan"
+            }
+        ]
+    },
+    "answer": {
+        "caption": "Christian Bale",
+        "image_path": "input/img/christian_bale.jpeg"
+    },
+    "background_audio": "input/audio/background_audio.mp3",
+    "background_video": "input/video/background.mp4"
+}
+```
 ## Ideas?
 - Add voice clips for the text
