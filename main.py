@@ -4,9 +4,11 @@ import json
 from moviepy import ImageClip, CompositeVideoClip, TextClip, ColorClip, concatenate_videoclips, AudioFileClip, VideoFileClip 
 from moviepy.video.fx import Loop
 from MoviePosterFinder.OMDBClient import OMDBClient
+from clients.TMDBClient import TMDBClient
 
 black = (0, 0, 0)
-OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+OMDB_API_KEY = os.getenv("GTA_OMDB_API_KEY")
+TMDB_API_KEY = os.getenv("GTA_TMDB_API_KEY")
 
 class Movie:
     def __init__(self, title, poster_path=None, release_year=None):
@@ -22,6 +24,8 @@ class ThreeColumnClip:
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
+    if relative_path == None:
+        return None
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
@@ -264,6 +268,11 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
     if not isinstance(data, dict):
         raise ValueError("JSON file must contain a dictionary with captions as keys and lists of image paths as values")
 
+    # Create OMDB client for retrieving movie posters
+    omdb_client = OMDBClient(api_key=OMDB_API_KEY)
+    # Create TMDB client for retrieving actor headshots
+    tmdb_client = TMDBClient(api_key=TMDB_API_KEY)
+
     # Get background video path if provided
     background_video_path = data["background_video"]
     if background_video_path == None or not os.path.exists(background_video_path):
@@ -302,8 +311,6 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
             poster_path = movie_datum.get("poster_path")
             release_year = movie_datum.get("release_year")
             if not poster_path:
-                # Download poster using OMDBClient
-                omdb_client = OMDBClient(api_key=OMDB_API_KEY)
                 try:
                     normalized_title = title.lower().replace(" ", "_").replace(":", "").replace("-", "_")
                     poster_path = resource_path(f"assets/{normalized_title}.jpg")
@@ -330,8 +337,17 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
 
     # Append answer clip
     answer = data["answer"]
-    actor_headshot_resource_path = resource_path(answer["image_path"])
-    answer_clip = create_answer_clip(answer["caption"], actor_headshot_resource_path, video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path)
+    print("Checking if answer has an image path field")
+    actor_headshot_path = ""
+    print("Image path is not there")
+    actor_name = answer["caption"]
+    if "image_path" not in answer:
+        actor_headshot_path = resource_path(f"assets/{actor_name.lower().replace(' ', '_')}.jpg")
+        tmdb_client.download_actor_headshot(actor_name, save_path=actor_headshot_path)
+    else:
+        actor_headshot_path = answer["image_path"]
+
+    answer_clip = create_answer_clip(answer["caption"], actor_headshot_path, video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path)
     clips.append(answer_clip)
     current_time += answer_clip.duration
 
@@ -358,7 +374,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Check for required environment variables
-    required_env_vars = ["OMDB_API_KEY"]
+    required_env_vars = ["GTA_OMDB_API_KEY", "GTA_TMDB_API_KEY"]
     for var in required_env_vars:
         if var not in os.environ:
             raise ValueError(f"Missing required environment variable: {var}")

@@ -3,7 +3,7 @@ import sys
 import os
 
 # Get your free API key at http://www.omdbapi.com/apikey.aspx
-OMDB_API_KEY = "your_api_key_here"
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
 class OMDBClient:
     def __init__(self, api_key):
@@ -51,4 +51,5 @@ if __name__ == "__main__":
 
     movie_title = " ".join(sys.argv[1:])
     filename = movie_title.replace(" ", "_") + ".jpg"
-    download_movie_poster(movie_title, save_path=filename)
+    omdbClient = OMDBClient(OMDB_API_KEY)
+    omdbClient.download_movie_poster(movie_title, save_path=filename)

@@ -1,51 +1,57 @@
 {
     "first_hint": {
-        "caption": "Cinephile\nLevel\nHints",
+        "caption": "Hard Level\nHints",
         "movies": [
             {
-                "title": "The Phoenician Scheme"
+                "title": "Around the World in 80 Days"
             },
             {
-                "title": "Asteroid City"
+                "title": "the Villain",
+                "release_year": "1979"
             },
             {
-                "title": "Saving Private Ryan"
+                "title": "Scavenger Hunt",
+                "release_year": "1979"
             }
         ]
     },
     "second_hint": {
-        "caption": "Average Movie\nEnjoyer Level\nHints",
+        "caption": "Medium Level\nHints",
         "movies": [
             {
-                "title": "Toy Story"
+                "title": "Batman & Robin",
+                "release_year": "1997"
             },
             {
-                "title": "The Polar Express"
+                "title": "The Expendables 3",
+                "release_year": "2014"
             },
             {
-                "title": "Pinocchio",
-                "release_year": "2022"
+                "title": "Sabotage",
+                "release_year": "2014"
             }
         ]
     },
     "third_hint": {
-        "caption": "Culturally Inept\nLevel\nHints",
+        "caption": "Easy Level\nHints",
         "movies": [
             {
-                "title": "Sleepless in Seattle"
+                "title": "Predator",
+                "release_year": "1987"
             },
             {
-                "title": "Big"
+                "title": "End of Days",
+                "release_year": "1999"
             },
             {
-                "title": "Forrest Gump"
+                "title": "Terminator",
+                "release_year": "1984"
             }
         ]
     },
     "answer": {
-        "caption": "Tom Hanks",
-        "image_path": "input/img/tom_hanks.jpg"
+        "caption": "Arnold Schwarzenegger"
     },
-    "background_audio": "input/audio/background_audio.mp3",
-    "background_video": "input/video/background.mp4"
+    "background_audio": "assets/background_audio.mp3",
+    "background_video": "assets/background_video.mp4"
 }
