@@ -3,3 +3,5 @@ input/img/*
 input/manifest.json
 .DS*
 bits_and_pieces/*
+build/
+main.spec
