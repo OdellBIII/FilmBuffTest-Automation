@@ -19,7 +19,17 @@ class ThreeColumnClip:
         self.caption = caption
         self.movies = movies
         self.size = size
-    
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)    
+
 def create_title_card(text, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None):
     """
     Creates a title card clip with specified text.
@@ -256,6 +266,8 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
 
     # Get background video path if provided
     background_video_path = data["background_video"]
+    if background_video_path == None or not os.path.exists(background_video_path):
+        background_video_path = resource_path("assets/background.mp4")
 
     clips = []
     current_time = 0
@@ -293,10 +305,12 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
                 # Download poster using OMDBClient
                 omdb_client = OMDBClient(api_key=OMDB_API_KEY)
                 try:
-                    poster_path = omdb_client.download_movie_poster(title, save_path=f"input/img/{title.replace(' ', '_')}.jpg", release_year=release_year)
+                    normalized_title = title.lower().replace(" ", "_").replace(":", "").replace("-", "_")
+                    poster_path = resource_path(f"assets/{normalized_title}.jpg")
+                    poster_path = omdb_client.download_movie_poster(title, save_path=poster_path, release_year=release_year)
                 except Exception as e:
                     print(f"Error downloading poster for '{title}': {e}")
-                    poster_path = "input/img/placeholder.jpg"
+                    poster_path = resource_path("input/img/placeholder.jpg")
 
             movies.append(Movie(title=title, poster_path=poster_path, release_year=release_year))
 
@@ -316,7 +330,8 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
 
     # Append answer clip
     answer = data["answer"]
-    answer_clip = create_answer_clip(answer["caption"], answer["image_path"], video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path)
+    actor_headshot_resource_path = resource_path(answer["image_path"])
+    answer_clip = create_answer_clip(answer["caption"], actor_headshot_resource_path, video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path)
     clips.append(answer_clip)
     current_time += answer_clip.duration
 
@@ -324,8 +339,9 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
     final_video = final_video.with_duration(current_time)
     # Add background audio
     background_audio_path = data["background_audio"]
-    background_audio_clip = AudioFileClip(background_audio_path).with_volume_scaled(0.1).with_duration(final_video.duration)
-    final_video = final_video.with_audio(background_audio_clip)
+    if background_audio_path and os.path.exists(background_audio_path):
+        background_audio_clip = AudioFileClip(background_audio_path).with_volume_scaled(0.1).with_duration(final_video.duration)
+        final_video = final_video.with_audio(background_audio_clip)
 
     # Write video file
     final_video.write_videofile(output_video_path, fps=fps, codec='libx264', threads=4)
@@ -338,7 +354,8 @@ if __name__ == "__main__":
     if sys.argv and len(sys.argv) > 1:
         manifest_file = sys.argv[1]
     else:
-        manifest_file = "input/manifest.json"
+        print("Usage: python main.py <path_to_manifest.json>")
+        sys.exit(1)
 
     # Check for required environment variables
     required_env_vars = ["OMDB_API_KEY"]
@@ -349,7 +366,7 @@ if __name__ == "__main__":
     try:
         create_tiktok_from_json(
             json_file_path=manifest_file,
-            output_video_path="output/output_video.mp4",
+            output_video_path="output_video.mp4",
             video_size=(1080, 1920),
             fps=30
         )
