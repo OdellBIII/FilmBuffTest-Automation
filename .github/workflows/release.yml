@@ -37,7 +37,7 @@ jobs:
         pyinstaller --onefile --name cinephile-automation-${{ matrix.platform }} main.py
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: cinephile-automation-${{ matrix.platform }}
         path: dist/cinephile-automation-${{ matrix.platform }}${{ matrix.extension }}
@@ -49,13 +49,13 @@ jobs:
 
     steps:
     - name: Download Linux artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: cinephile-automation-linux
         path: ./artifacts/
 
     - name: Download macOS artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: cinephile-automation-macos
         path: ./artifacts/
