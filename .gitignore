@@ -5,3 +5,4 @@ input/manifest.json
 bits_and_pieces/*
 build/
 main.spec
+assets/*
