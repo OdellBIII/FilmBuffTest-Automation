@@ -91,24 +91,33 @@ def get_build_choice():
     if sys.platform != 'darwin':
         return 'tiktok-creator.spec'
 
-    print("\n🍎 macOS Build Options:")
+    import platform
+    current_arch = platform.machine()
+
+    print(f"\n🍎 macOS Build Options (current system: {current_arch}):")
     print("  1. Universal Binary (recommended) - Works on Intel and Apple Silicon Macs")
-    print("  2. Intel Only - Maximum compatibility with older Macs")
-    print("  3. Auto-detect - Let the script choose")
+    print("  2. Intel Only (x86_64) - Maximum compatibility with older Macs")
+    print("  3. Apple Silicon Only (arm64) - Optimized for M1/M2/M3 Macs")
+    print("  4. Build All Types - Creates Intel, ARM64, and Universal versions")
+    print("  5. Auto-detect - Let the script choose")
 
     while True:
         try:
-            choice = input("\nEnter your choice (1-3) or press Enter for auto-detect: ").strip()
+            choice = input("\nEnter your choice (1-5) or press Enter for auto-detect: ").strip()
 
-            if choice == '' or choice == '3':
-                # Auto-detect: try universal first, fallback to Intel
+            if choice == '' or choice == '5':
+                # Auto-detect: try universal first, fallback based on current arch
                 return 'auto'
             elif choice == '1':
                 return 'tiktok-creator.spec'
             elif choice == '2':
                 return 'tiktok-creator-intel.spec'
+            elif choice == '3':
+                return 'tiktok-creator-arm64.spec'
+            elif choice == '4':
+                return 'all'
             else:
-                print("❌ Invalid choice. Please enter 1, 2, 3, or press Enter.")
+                print("❌ Invalid choice. Please enter 1-5 or press Enter.")
         except KeyboardInterrupt:
             print("\n\n👋 Build cancelled.")
             sys.exit(0)
@@ -155,65 +164,124 @@ def main():
 
     # Step 4: Build executable
     success = False
+    built_executables = []
 
     if spec_file == 'auto':
-        # Try universal first, then Intel fallback
+        # Try universal first, then fallback based on current architecture
         print("🔄 Trying universal binary first...")
         result = build_with_spec('tiktok-creator.spec')
 
         if result.returncode == 0:
             print("✅ Universal build succeeded!")
             success = True
+            built_executables.append('dist/TikTokCreator')
         else:
-            print("⚠️  Universal build failed, trying Intel-only...")
-            result = build_with_spec('tiktok-creator-intel.spec')
+            import platform
+            current_arch = platform.machine()
+
+            if current_arch == 'arm64':
+                print("⚠️  Universal build failed, trying Apple Silicon build...")
+                fallback_spec = 'tiktok-creator-arm64.spec'
+                expected_exe = 'dist/TikTokCreator-ARM64'
+            else:
+                print("⚠️  Universal build failed, trying Intel build...")
+                fallback_spec = 'tiktok-creator-intel.spec'
+                expected_exe = 'dist/TikTokCreator-Intel'
+
+            result = build_with_spec(fallback_spec)
+            if result.returncode == 0:
+                print(f"✅ {current_arch} build succeeded!")
+                success = True
+                built_executables.append(expected_exe)
+
+    elif spec_file == 'all':
+        # Build all three types
+        specs_and_exes = [
+            ('tiktok-creator.spec', 'dist/TikTokCreator', 'Universal'),
+            ('tiktok-creator-intel.spec', 'dist/TikTokCreator-Intel', 'Intel'),
+            ('tiktok-creator-arm64.spec', 'dist/TikTokCreator-ARM64', 'Apple Silicon')
+        ]
+
+        for spec, exe_path, build_type in specs_and_exes:
+            print(f"🔄 Building {build_type} version...")
+            result = build_with_spec(spec)
 
             if result.returncode == 0:
-                print("✅ Intel build succeeded!")
+                print(f"✅ {build_type} build succeeded!")
+                built_executables.append(exe_path)
                 success = True
+            else:
+                print(f"❌ {build_type} build failed")
+
     else:
         # Use specified spec file
         result = build_with_spec(spec_file)
         success = result.returncode == 0
 
+        if success:
+            # Determine expected executable name
+            if 'intel' in spec_file:
+                built_executables.append('dist/TikTokCreator-Intel')
+            elif 'arm64' in spec_file:
+                built_executables.append('dist/TikTokCreator-ARM64')
+            else:
+                built_executables.append('dist/TikTokCreator')
+
     # Check results
-    if success:
-        # Check if executable was created
-        exe_paths = ['dist/TikTokCreator', 'dist/TikTokCreator-Intel', 'dist/TikTokCreator.exe']
-        exe_path = None
+    if success and built_executables:
+        print("\n🎉 Build completed successfully!")
+        print(f"\n📦 Created {len(built_executables)} executable(s):")
 
-        for path in exe_paths:
-            if os.path.exists(path):
-                exe_path = path
-                break
+        total_size = 0
+        for exe_path in built_executables:
+            if os.path.exists(exe_path):
+                size_mb = os.path.getsize(exe_path) / (1024 * 1024)
+                total_size += size_mb
+                print(f"   • {exe_path} ({size_mb:.1f} MB)")
 
-        if exe_path:
-            print(f"📦 Executable created: {exe_path}")
+                # Check architecture on macOS
+                if sys.platform == 'darwin':
+                    print(f"     Architecture info for {os.path.basename(exe_path)}:")
+                    check_macos_architecture(exe_path)
+                    print()
+            else:
+                print(f"   ❌ {exe_path} - NOT FOUND")
 
-            # Get file size
-            size_mb = os.path.getsize(exe_path) / (1024 * 1024)
-            print(f"📏 File size: {size_mb:.1f} MB")
+        print(f"📏 Total size: {total_size:.1f} MB")
 
-            # Check architecture on macOS
-            if sys.platform == 'darwin':
-                check_macos_architecture(exe_path)
+        print("\n📋 Next steps:")
+        print("   1. Test the executable(s) by running them")
+        print("   2. Each executable will start a web server on http://localhost:8080")
+        print("   3. Your browser should open automatically")
 
-            print("\n🎉 Build completed successfully!")
-            print("\n📋 Next steps:")
-            print("   1. Test the executable by running it")
-            print("   2. The executable will start a web server on http://localhost:8080")
-            print("   3. Your browser should open automatically")
-            print("\n💡 Distribution:")
+        print("\n💡 Distribution Guide:")
+        if len(built_executables) > 1:
+            print("   Multiple builds created:")
+            for exe_path in built_executables:
+                if 'Intel' in exe_path:
+                    print("   • TikTokCreator-Intel: For older Intel Macs")
+                elif 'ARM64' in exe_path:
+                    print("   • TikTokCreator-ARM64: For M1/M2/M3 Macs")
+                elif 'TikTokCreator' in exe_path and 'ARM64' not in exe_path and 'Intel' not in exe_path:
+                    print("   • TikTokCreator: Universal binary (Intel + Apple Silicon)")
+        else:
             print("   - The executable is self-contained")
             print("   - No Python installation required on target machines")
-            print("   - Compatible with older Macs (Intel architecture)")
-        else:
-            print("❌ Executable not found after build")
-            sys.exit(1)
+
+        print("\n🎯 Compatibility:")
+        if any('Intel' in exe for exe in built_executables):
+            print("   ✅ Intel Macs (older machines)")
+        if any('ARM64' in exe for exe in built_executables):
+            print("   ✅ Apple Silicon Macs (M1/M2/M3)")
+        if any(exe.endswith('TikTokCreator') for exe in built_executables):
+            print("   ✅ Universal compatibility (all Mac types)")
+
     else:
-        print("\n❌ Build failed. Error output:")
-        print("STDOUT:", result.stdout)
-        print("STDERR:", result.stderr)
+        print("\n❌ Build failed or no executables created.")
+        if 'result' in locals():
+            print("Error output:")
+            print("STDOUT:", result.stdout)
+            print("STDERR:", result.stderr)
         sys.exit(1)
 
 if __name__ == '__main__':
