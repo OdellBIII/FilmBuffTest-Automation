@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+# Apple Silicon (M1/M2/M3) build spec for ARM64 Macs
 
 import os
 
@@ -81,7 +82,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='TikTokCreator',
+    name='TikTokCreator-ARM64',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -91,8 +92,8 @@ exe = EXE(
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch='universal2',  # Build for both Intel and Apple Silicon
+    target_arch='arm64',  # Apple Silicon (M1/M2/M3) build
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # You can add an icon file here if you have one
+    icon=None,
 )
