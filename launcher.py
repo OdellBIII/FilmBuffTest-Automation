@@ -120,6 +120,26 @@ def create_tiktok_video():
             'errors': error_details
         }), 500
 
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """Gracefully shutdown the Flask server"""
+    try:
+        # Get the Werkzeug shutdown function
+        shutdown_func = request.environ.get('werkzeug.server.shutdown')
+        if shutdown_func is None:
+            # Alternative method for newer Flask versions
+            import os
+            import signal
+            print("\n🛑 Shutdown requested - stopping server...")
+            os.kill(os.getpid(), signal.SIGINT)
+            return jsonify({'success': True, 'message': 'Server shutting down...'})
+
+        print("\n🛑 Shutdown requested - stopping server...")
+        shutdown_func()
+        return jsonify({'success': True, 'message': 'Server shutting down...'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error during shutdown: {str(e)}'})
+
 def open_browser():
     """Open the default web browser to the application URL"""
     time.sleep(1.5)  # Wait for Flask to start
