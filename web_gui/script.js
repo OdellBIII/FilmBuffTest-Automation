@@ -37,6 +37,9 @@ function initializeEventListeners() {
     // Generate manifest button
     document.getElementById('generateBtn').addEventListener('click', createTikTokVideo);
 
+    // Exit button
+    document.getElementById('exitBtn').addEventListener('click', exitApplication);
+
     // Browse output directory button
     document.getElementById('browseOutputBtn').addEventListener('click', function() {
         // Note: Web browsers don't allow direct directory selection for security reasons
@@ -347,6 +350,97 @@ function showErrorMessage(message) {
     errorDiv.className = 'error-message';
     errorDiv.textContent = message;
     progressSection.appendChild(errorDiv);
+}
+
+function exitApplication() {
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to exit the TikTok Creator application?');
+
+    if (confirmed) {
+        // Disable the exit button to prevent multiple clicks
+        const exitBtn = document.getElementById('exitBtn');
+        exitBtn.disabled = true;
+        exitBtn.textContent = 'Shutting down...';
+
+        // Send shutdown request to server
+        fetch('/shutdown', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            // Show farewell message
+            document.body.innerHTML = `
+                <div style="
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    background-color: #000;
+                    color: #fff;
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                ">
+                    <h1 style="font-size: 3rem; margin-bottom: 20px;">👋</h1>
+                    <h2 style="font-size: 2rem; margin-bottom: 10px;">Thanks for using TikTok Creator!</h2>
+                    <p style="font-size: 1.2rem; color: #ccc;">The application is shutting down...</p>
+                    <p style="font-size: 1rem; color: #888; margin-top: 20px;">You can safely close this tab now.</p>
+                </div>
+            `;
+
+            // Try to close the tab/window after a short delay
+            setTimeout(() => {
+                // Modern browsers restrict window.close() for security reasons
+                // It only works if the window was opened by a script
+                if (window.opener || window.history.length === 1) {
+                    window.close();
+                } else {
+                    // If we can't close the tab, just show a message
+                    document.body.innerHTML += `
+                        <div style="
+                            position: fixed;
+                            bottom: 20px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background-color: #333;
+                            color: #fff;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            font-size: 14px;
+                        ">
+                            Please close this tab manually (browser security limitation)
+                        </div>
+                    `;
+                }
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Error during shutdown:', error);
+            // Even if the request fails, show the farewell message
+            // The server is probably already shutting down
+            document.body.innerHTML = `
+                <div style="
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    background-color: #000;
+                    color: #fff;
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                ">
+                    <h1 style="font-size: 3rem; margin-bottom: 20px;">👋</h1>
+                    <h2 style="font-size: 2rem; margin-bottom: 10px;">Thanks for using TikTok Creator!</h2>
+                    <p style="font-size: 1.2rem; color: #ccc;">Application has been shut down.</p>
+                    <p style="font-size: 1rem; color: #888; margin-top: 20px;">You can safely close this tab now.</p>
+                </div>
+            `;
+        });
+    }
 }
 
 // Keyboard shortcuts
