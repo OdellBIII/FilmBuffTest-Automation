@@ -5,10 +5,12 @@ from moviepy import ImageClip, CompositeVideoClip, TextClip, ColorClip, concaten
 from moviepy.video.fx import Loop
 from MoviePosterFinder.OMDBClient import OMDBClient
 from clients.TMDBClient import TMDBClient
+from clients.ElevenLabsClient import ElevenLabsClient
 
 black = (0, 0, 0)
 OMDB_API_KEY = os.getenv("GTA_OMDB_API_KEY")
 TMDB_API_KEY = os.getenv("GTA_TMDB_API_KEY")
+ELEVEN_LABS_API_KEY = os.getenv("GTA_ELEVEN_LABS_API_KEY")
 
 class Movie:
     def __init__(self, title, poster_path=None, release_year=None):
@@ -32,12 +34,54 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
 
-    return os.path.join(base_path, relative_path)    
+    return os.path.join(base_path, relative_path)
 
-def create_title_card(text, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None):
+def generate_voice_over(text: str, eleven_labs_client: ElevenLabsClient = None) -> str:
+    """
+    Generate voice-over audio for given text using Eleven Labs
+
+    Args:
+        text (str): Text to convert to speech
+        eleven_labs_client (ElevenLabsClient): Eleven Labs client instance
+
+    Returns:
+        str: Path to generated audio file, or None if voice-over is disabled/failed
+    """
+    print(f"🎤 Debug: generate_voice_over called with text: '{text[:50]}...'")
+    print(f"🎤 Debug: eleven_labs_client exists: {eleven_labs_client is not None}")
+
+    if not eleven_labs_client or not text.strip():
+        print(f"🎤 Debug: Skipping voice-over - client: {eleven_labs_client is not None}, text: '{text.strip()}'")
+        return None
+
+    try:
+        # Clean text for speech (remove special characters that might cause issues)
+        clean_text = text.replace('\n', ' ').replace('\r', ' ').strip()
+        if not clean_text:
+            print("🎤 Debug: No clean text after processing")
+            return None
+
+        print(f"🎤 Debug: Generating voice-over for: '{clean_text}'")
+
+        # Create a unique filename based on the text content
+        import hashlib
+        text_hash = hashlib.md5(clean_text.encode()).hexdigest()[:8]
+        filename = f"voice_{text_hash}.mp3"
+        save_path = resource_path(f"assets/{filename}")
+
+        # Generate voice-over
+        audio_path = eleven_labs_client.text_to_speech(clean_text, save_path=save_path)
+        print(f"🎤 Debug: Voice-over generated successfully: {audio_path}")
+        return audio_path
+
+    except Exception as e:
+        print(f"❌ Warning: Failed to generate voice-over for text '{text[:50]}...': {e}")
+        return None
+
+def create_title_card(text, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None, voice_over_path=None):
     """
     Creates a title card clip with specified text.
-    
+
     Args:
         text (str): Text to display on the title card
         video_size (tuple): Size of the video (width, height)
@@ -45,9 +89,11 @@ def create_title_card(text, video_size, duration=3, fontsize=70, color='white', 
         fontsize (int): Font size of the text
         color (str): Text color
         bg_color (str): Background color
-    
+        bg_video_path (str): Path to background video
+        voice_over_path (str): Path to voice-over audio file
+
     Returns:
-        ImageClip: A MoviePy ImageClip representing the title card
+        CompositeVideoClip: A MoviePy CompositeVideoClip representing the title card
     """
     
     # Create a background color clip
@@ -68,10 +114,37 @@ def create_title_card(text, video_size, duration=3, fontsize=70, color='white', 
     
     # Composite the text over the background
     title_card = CompositeVideoClip([bg_clip, txt_clip], size=video_size, use_bgclip=True)
-    
+
+    # Add voice-over audio if provided
+    print(f"🔊 Debug: voice_over_path = {voice_over_path}")
+    print(f"🔊 Debug: voice_over_path exists = {voice_over_path and os.path.exists(voice_over_path) if voice_over_path else False}")
+
+    if voice_over_path and os.path.exists(voice_over_path):
+        try:
+            print(f"🔊 Debug: Loading audio from {voice_over_path}")
+            voice_audio = AudioFileClip(voice_over_path)
+            print(f"🔊 Debug: Audio duration: {voice_audio.duration}, Video duration: {duration}")
+
+            # Adjust duration to match video or vice versa
+            if voice_audio.duration > duration:
+                # If voice-over is longer, extend video duration
+                title_card = title_card.with_duration(voice_audio.duration)
+                print(f"🔊 Debug: Extended video duration to {voice_audio.duration}")
+            else:
+                # If voice-over is shorter, trim it to video duration
+                voice_audio = voice_audio.with_duration(duration)
+                print(f"🔊 Debug: Trimmed audio duration to {duration}")
+
+            title_card = title_card.with_audio(voice_audio)
+            print("🔊 Debug: Audio successfully added to title card")
+        except Exception as e:
+            print(f"❌ Warning: Could not add voice-over audio: {e}")
+    else:
+        print("🔊 Debug: No voice-over audio to add")
+
     return title_card
 
-def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None):
+def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3, fontsize=70, color='white', bg_color=black, bg_video_path=None, voice_over_path=None):
     """
     Creates an answer clip with specified text and actor headshot.
     
@@ -109,10 +182,26 @@ def create_answer_clip(answer_text, actor_headshot_path, video_size, duration=3,
     # Composite the text and headshot over the background
     answer_clip = CompositeVideoClip([bg_clip, txt_clip, headshot_clip], size=video_size, use_bgclip=True)
 
+    # Add voice-over audio if provided
+    if voice_over_path and os.path.exists(voice_over_path):
+        try:
+            voice_audio = AudioFileClip(voice_over_path)
+            # Adjust duration to match video or vice versa
+            if voice_audio.duration > duration:
+                # If voice-over is longer, extend video duration
+                answer_clip = answer_clip.with_duration(voice_audio.duration)
+            else:
+                # If voice-over is shorter, trim it to video duration
+                voice_audio = voice_audio.with_duration(duration)
+
+            answer_clip = answer_clip.with_audio(voice_audio)
+        except Exception as e:
+            print(f"Warning: Could not add voice-over audio: {e}")
+
     return answer_clip
 
-def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_time=0, 
-                            video_size=(1920, 1080), fps=30, bg_video_path=None):
+def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_time=0,
+                            video_size=(1920, 1080), fps=30, bg_video_path=None, eleven_labs_client=None):
     """
     Creates a video where 3 images appear fullscreen then shrink to form a 1 x 3 grid.
     Compatible with MoviePy v2.0+
@@ -153,15 +242,19 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
     current_time = 0
     clips.append(bg_clip)
 
+    # Generate voice-over for caption
+    caption_voice_path = generate_voice_over(three_column_clip.caption, eleven_labs_client) if eleven_labs_client else None
+
     # Append a title card
     title_clip = create_title_card(
         three_column_clip.caption,
         video_size=video_size,
         duration=5, fontsize=140,
-        color='white', bg_video_path=bg_video_path
-    ) 
+        color='white', bg_video_path=bg_video_path,
+        voice_over_path=caption_voice_path
+    )
     clips.append(title_clip)
-    current_time += 5  # Add title duration to current time
+    current_time += title_clip.duration  # Use actual clip duration
 
     for i, movie in enumerate(three_column_clip.movies):
         # Load image
@@ -272,6 +365,32 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
     omdb_client = OMDBClient(api_key=OMDB_API_KEY)
     # Create TMDB client for retrieving actor headshots
     tmdb_client = TMDBClient(api_key=TMDB_API_KEY)
+    # Create Eleven Labs client for voice-overs if enabled
+    eleven_labs_client = None
+    enable_voice_overs = data.get("enable_voice_overs", False)
+
+    print(f"🔍 Debug: enable_voice_overs = {enable_voice_overs}")
+    print(f"🔍 Debug: ELEVEN_LABS_API_KEY exists = {bool(ELEVEN_LABS_API_KEY)}")
+    print(f"🔍 Debug: Full manifest data keys: {list(data.keys())}")
+
+    if enable_voice_overs and ELEVEN_LABS_API_KEY:
+        try:
+            eleven_labs_client = ElevenLabsClient(api_key=ELEVEN_LABS_API_KEY)
+            print("✅ Eleven Labs voice-overs enabled")
+
+            # Test the client with a simple phrase
+            test_save_path = resource_path("assets/test_voice.mp3")
+            test_audio_path = eleven_labs_client.text_to_speech("Test voice over", save_path=test_save_path)
+            print(f"✅ Test voice-over generated: {test_audio_path}")
+
+        except Exception as e:
+            print(f"⚠️ Warning: Could not initialize Eleven Labs client: {e}")
+            print("Continuing without voice-overs...")
+    elif enable_voice_overs:
+        print("⚠️ Warning: Voice-overs enabled but no Eleven Labs API key found")
+        print("Continuing without voice-overs...")
+    else:
+        print("ℹ️ Voice-overs disabled in settings")
 
     # Get background video path if provided
     background_video_path = data["background_video"]
@@ -280,11 +399,17 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
 
     clips = []
     current_time = 0
+
+    # Generate voice-over for intro title
+    intro_text = "Can you guess this actor from only their films?"
+    intro_voice_path = generate_voice_over(intro_text, eleven_labs_client) if eleven_labs_client else None
+
     title_clip = create_title_card(
         "Can you\n guess this\n actor from\n only their\n films?",
         video_size=video_size,
         duration=5, fontsize=140,
-        color='white', bg_color=black, bg_video_path=background_video_path
+        color='white', bg_color=black, bg_video_path=background_video_path,
+        voice_over_path=intro_voice_path
     )
     clips.append(title_clip)
     current_time += title_clip.duration  # Add title duration to current time
@@ -322,15 +447,20 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
             movies.append(Movie(title=title, poster_path=poster_path, release_year=release_year))
 
         three_column_clip = ThreeColumnClip(caption, movies, video_size)
-        hint_clip = create_column_animation_clip(three_column_clip, current_time, video_size, fps, bg_video_path=background_video_path)
+        hint_clip = create_column_animation_clip(three_column_clip, current_time, video_size, fps, bg_video_path=background_video_path, eleven_labs_client=eleven_labs_client)
         clips.append(hint_clip)
         current_time += hint_clip.duration
+
+    # Generate voice-over for "The answer is" text
+    answer_intro_text = "The answer is"
+    answer_intro_voice_path = generate_voice_over(answer_intro_text, eleven_labs_client) if eleven_labs_client else None
 
     the_answer_is_clip = create_title_card(
         "The answer is ...",
         video_size=video_size,
         duration=3, fontsize=140,
-        color='white', bg_color=black, bg_video_path=background_video_path
+        color='white', bg_color=black, bg_video_path=background_video_path,
+        voice_over_path=answer_intro_voice_path
     )
     clips.append(the_answer_is_clip)
     current_time += the_answer_is_clip.duration
@@ -347,7 +477,10 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
     else:
         actor_headshot_path = answer["image_path"]
 
-    answer_clip = create_answer_clip(answer["caption"], actor_headshot_path, video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path)
+    # Generate voice-over for actor name
+    actor_voice_path = generate_voice_over(actor_name, eleven_labs_client) if eleven_labs_client else None
+
+    answer_clip = create_answer_clip(answer["caption"], actor_headshot_path, video_size, duration=5, fontsize=70, color='white', bg_color=black, bg_video_path=background_video_path, voice_over_path=actor_voice_path)
     clips.append(answer_clip)
     current_time += answer_clip.duration
 

@@ -77,6 +77,8 @@ def create_tiktok_video():
                 os.environ['GTA_OMDB_API_KEY'] = manifest['omdb_api_key']
             if 'tmdb_api_key' in manifest:
                 os.environ['GTA_TMDB_API_KEY'] = manifest['tmdb_api_key']
+            if 'eleven_labs_api_key' in manifest:
+                os.environ['GTA_ELEVEN_LABS_API_KEY'] = manifest['eleven_labs_api_key']
 
             # Import and run the create_tiktok_from_json function directly
             import sys

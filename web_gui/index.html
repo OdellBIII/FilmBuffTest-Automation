@@ -87,6 +87,26 @@
                 <input type="password" id="tmdbApiKey" class="text-input api-key-input" placeholder="Enter TMDB API key (optional)">
                 <button type="button" id="toggleTmdbKey" class="toggle-visibility-btn">👁️</button>
             </div>
+            <div class="input-group">
+                <label for="elevenLabsApiKey">Eleven Labs API Key (for voice-overs):</label>
+                <input type="password" id="elevenLabsApiKey" class="text-input api-key-input" placeholder="Enter Eleven Labs API key (optional)">
+                <button type="button" id="toggleElevenLabsKey" class="toggle-visibility-btn">👁️</button>
+            </div>
+        </div>
+
+        <!-- Voice-Over Settings Section -->
+        <div class="section">
+            <h2>Voice-Over Settings</h2>
+            <div class="api-keys-note">
+                <p>ℹ️ <strong>Voice-Over Feature:</strong> Enable AI-generated voice narration for captions, movie titles, and actor names using Eleven Labs.</p>
+            </div>
+            <div class="input-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="enableVoiceOvers" class="voice-over-checkbox">
+                    <span class="checkmark"></span>
+                    Enable voice-overs for captions, movie titles, and actor names
+                </label>
+            </div>
         </div>
 
         <!-- Background Files Section -->
