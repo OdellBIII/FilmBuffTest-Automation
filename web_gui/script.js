@@ -55,6 +55,10 @@ function initializeEventListeners() {
     document.getElementById('toggleTmdbKey').addEventListener('click', function() {
         togglePasswordVisibility('tmdbApiKey', 'toggleTmdbKey');
     });
+
+    document.getElementById('toggleElevenLabsKey').addEventListener('click', function() {
+        togglePasswordVisibility('elevenLabsApiKey', 'toggleElevenLabsKey');
+    });
 }
 
 function initializeFileInputs() {
@@ -319,6 +323,7 @@ function buildManifest() {
     // Add API keys if provided
     const omdbApiKey = document.getElementById('omdbApiKey').value.trim();
     const tmdbApiKey = document.getElementById('tmdbApiKey').value.trim();
+    const elevenLabsApiKey = document.getElementById('elevenLabsApiKey').value.trim();
 
     if (omdbApiKey) {
         manifest.omdb_api_key = omdbApiKey;
@@ -327,6 +332,14 @@ function buildManifest() {
     if (tmdbApiKey) {
         manifest.tmdb_api_key = tmdbApiKey;
     }
+
+    if (elevenLabsApiKey) {
+        manifest.eleven_labs_api_key = elevenLabsApiKey;
+    }
+
+    // Add voice-over settings
+    const enableVoiceOvers = document.getElementById('enableVoiceOvers').checked;
+    manifest.enable_voice_overs = enableVoiceOvers;
 
     return manifest;
 }
