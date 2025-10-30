@@ -150,12 +150,18 @@
             </div>
             <div class="modal-body">
                 <div class="input-group">
-                    <label for="movieTitle">Movie Title (Required):</label>
-                    <input type="text" id="movieTitle" class="text-input" required>
+                    <label for="movieTitle">Movie Title:</label>
+                    <input type="text" id="movieTitle" class="text-input">
+                    <small style="display: block; margin-top: 5px; color: #666;">Required if IMDB URL is not provided</small>
                 </div>
                 <div class="input-group">
                     <label for="movieYear">Release Year (Optional):</label>
                     <input type="text" id="movieYear" class="text-input" placeholder="e.g., 1987">
+                </div>
+                <div class="input-group">
+                    <label for="imdbUrl">IMDB URL:</label>
+                    <input type="text" id="imdbUrl" class="text-input" placeholder="e.g., https://www.imdb.com/title/tt0117500/">
+                    <small style="display: block; margin-top: 5px; color: #666;">Required if Movie Title is not provided. Will use IMDB ID for poster lookup</small>
                 </div>
                 <div class="input-group">
                     <label for="moviePoster">Movie Poster (Optional):</label>

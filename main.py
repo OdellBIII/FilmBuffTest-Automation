@@ -11,10 +11,11 @@ OMDB_API_KEY = os.getenv("GTA_OMDB_API_KEY")
 TMDB_API_KEY = os.getenv("GTA_TMDB_API_KEY")
 
 class Movie:
-    def __init__(self, title, poster_path=None, release_year=None):
+    def __init__(self, title, poster_path=None, release_year=None, imdb_url=None):
         self.title = title
         self.poster_path = poster_path
         self.release_year = release_year
+        self.imdb_url = imdb_url
 
 class ThreeColumnClip:
     def __init__(self, caption, movies, size):
@@ -310,16 +311,17 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
             title = movie_datum["title"]
             poster_path = movie_datum.get("poster_path")
             release_year = movie_datum.get("release_year")
+            imdb_url = movie_datum.get("imdb_url")
             if not poster_path:
                 try:
                     normalized_title = title.lower().replace(" ", "_").replace(":", "").replace("-", "_")
                     poster_path = resource_path(f"assets/{normalized_title}.jpg")
-                    poster_path = omdb_client.download_movie_poster(title, save_path=poster_path, release_year=release_year)
+                    poster_path = omdb_client.download_movie_poster(title, save_path=poster_path, release_year=release_year, imdb_url=imdb_url)
                 except Exception as e:
                     print(f"Error downloading poster for '{title}': {e}")
                     poster_path = resource_path("input/img/placeholder.jpg")
 
-            movies.append(Movie(title=title, poster_path=poster_path, release_year=release_year))
+            movies.append(Movie(title=title, poster_path=poster_path, release_year=release_year, imdb_url=imdb_url))
 
         three_column_clip = ThreeColumnClip(caption, movies, video_size)
         hint_clip = create_column_animation_clip(three_column_clip, current_time, video_size, fps, bg_video_path=background_video_path)
