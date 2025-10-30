@@ -128,6 +128,7 @@ function openMovieModal(button) {
     // Clear previous data
     document.getElementById('movieTitle').value = '';
     document.getElementById('movieYear').value = '';
+    document.getElementById('imdbUrl').value = '';
     document.getElementById('moviePoster').value = '';
     document.getElementById('posterFileName').textContent = 'No file selected';
 
@@ -136,6 +137,7 @@ function openMovieModal(button) {
         const movie = movieData[buttonId];
         document.getElementById('movieTitle').value = movie.title || '';
         document.getElementById('movieYear').value = movie.release_year || '';
+        document.getElementById('imdbUrl').value = movie.imdb_url || '';
         if (movie.poster_path) {
             document.getElementById('posterFileName').textContent = movie.poster_path.split('/').pop();
         }
@@ -153,21 +155,28 @@ function closeMovieModal() {
 
 function saveMovie() {
     const title = document.getElementById('movieTitle').value.trim();
+    const year = document.getElementById('movieYear').value.trim();
+    const imdbUrl = document.getElementById('imdbUrl').value.trim();
+    const posterFile = document.getElementById('moviePoster').files[0];
 
-    if (!title) {
-        alert('Movie title is required!');
+    // Title is required only if IMDB URL is not provided
+    if (!title && !imdbUrl) {
+        alert('Either Movie Title or IMDB URL is required!');
         return;
     }
 
-    const year = document.getElementById('movieYear').value.trim();
-    const posterFile = document.getElementById('moviePoster').files[0];
+    const movieInfo = {};
 
-    const movieInfo = {
-        title: title
-    };
+    if (title) {
+        movieInfo.title = title;
+    }
 
     if (year) {
         movieInfo.release_year = year;
+    }
+
+    if (imdbUrl) {
+        movieInfo.imdb_url = imdbUrl;
     }
 
     if (posterFile) {
@@ -181,10 +190,13 @@ function saveMovie() {
     movieData[buttonId] = movieInfo;
 
     // Update button text and appearance
-    const displayTitle = title.length > 15 ? title.substring(0, 15) + '...' : title;
-    currentEditingButton.textContent = displayTitle;
+    // Use title if available, otherwise show IMDB indicator
+    const displayText = title
+        ? (title.length > 15 ? title.substring(0, 15) + '...' : title)
+        : 'IMDB Movie';
+    currentEditingButton.textContent = displayText;
     currentEditingButton.classList.add('filled');
-    currentEditingButton.title = title; // Show full title on hover
+    currentEditingButton.title = title || imdbUrl; // Show full title or IMDB URL on hover
 
     closeMovieModal();
 }
