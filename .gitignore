@@ -6,3 +6,13 @@ bits_and_pieces/*
 build/
 main.spec
 assets/*
+.env
+*.mp4
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+dist/
+*.egg-info/

@@ -257,10 +257,21 @@ def create_column_animation_clip(three_column_clip : ThreeColumnClip, current_ti
 
     return final_video
 
-def create_tiktok_from_json(json_file_path, output_video_path="output_column_animation.mp4", 
-                         video_size=(1080, 1920), fps=30):
+def create_tiktok_from_json(json_file_path, output_video_path="output_column_animation.mp4",
+                         video_size=(1080, 1920), fps=30, upload_to_b2=False, delete_local_after_upload=True):
     """
     Creates a TikTok-style vertical video that combines multiple ThreeColumnClip instances.
+
+    Args:
+        json_file_path: Path to the manifest JSON file
+        output_video_path: Path where the video will be saved
+        video_size: Tuple of (width, height) for the video
+        fps: Frames per second for the video
+        upload_to_b2: If True, upload the video to Backblaze B2 after creation
+        delete_local_after_upload: If True, delete the local video file after successful B2 upload
+
+    Returns:
+        dict: Information about the created video and upload status (if uploaded)
     """
 
     # Load data from JSON
@@ -363,9 +374,66 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
 
     # Write video file
     final_video.write_videofile(output_video_path, fps=fps, codec='libx264', threads=4)
-    
+
     print(f"Video created successfully: {output_video_path}")
     print(f"Total duration: {current_time} seconds")
+
+    # Prepare result dictionary
+    result = {
+        'success': True,
+        'local_path': output_video_path,
+        'duration': current_time,
+        'uploaded_to_b2': False
+    }
+
+    # Upload to Backblaze B2 if requested
+    if upload_to_b2:
+        try:
+            print("\n" + "="*60)
+            print("☁️  Starting Backblaze B2 upload...")
+            print("="*60)
+
+            from clients.B2StorageClient import upload_video_to_b2
+
+            upload_result = upload_video_to_b2(
+                video_path=output_video_path,
+                delete_local=delete_local_after_upload
+            )
+
+            result['uploaded_to_b2'] = True
+            result['b2_file_id'] = upload_result['file_id']
+            result['b2_file_name'] = upload_result['file_name']
+            result['b2_url'] = upload_result['url']
+            result['b2_size'] = upload_result['size']
+            result['local_deleted'] = upload_result['local_deleted']
+
+            print("\n" + "="*60)
+            print("✅ Upload Complete!")
+            print("="*60)
+            print(f"📥 B2 File ID: {upload_result['file_id']}")
+            print(f"📥 B2 File Name: {upload_result['file_name']}")
+            print(f"🔗 Download URL: {upload_result['url']}")
+            print(f"💾 File Size: {upload_result['size'] / (1024*1024):.2f} MB")
+            if upload_result['local_deleted']:
+                print(f"🗑️  Local file deleted: {output_video_path}")
+            print("="*60)
+
+        except ImportError:
+            print("\n⚠️  Warning: B2StorageClient not found. Install b2sdk to enable uploads.")
+            print("   Run: pip install b2sdk")
+            result['upload_error'] = "B2StorageClient not available"
+        except ValueError as ve:
+            print(f"\n⚠️  Warning: B2 upload failed - {ve}")
+            print("   Make sure to set B2 environment variables:")
+            print("   - B2_APPLICATION_KEY_ID")
+            print("   - B2_APPLICATION_KEY")
+            print("   - B2_BUCKET_NAME")
+            result['upload_error'] = str(ve)
+        except Exception as e:
+            print(f"\n⚠️  Warning: B2 upload failed - {e}")
+            result['upload_error'] = str(e)
+
+    return result
 
 if __name__ == "__main__":
     # Example usage
