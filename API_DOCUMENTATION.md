@@ -118,11 +118,11 @@ Content-Type: application/json
 - **manifest** (required): The video configuration object
   - **first_hint**, **second_hint**, **third_hint** (required): Three hint sections
     - **caption**: Text to display for this hint level
-    - **movies**: Array of exactly 3 movie objects
-      - **title**: Movie title (required if `imdb_url` not provided)
-      - **release_year**: Release year for more accurate poster lookup (optional)
+    - **movies**: Array of exactly 3 movie objects (each movie must have either `title` or `imdb_url`)
+      - **title**: Movie title (required if `imdb_url` not provided, optional if `imdb_url` is provided)
+      - **release_year**: Release year for more accurate poster lookup (optional, not needed if `imdb_url` provided)
       - **poster_path**: Path to custom poster image (optional, will auto-fetch if not provided)
-      - **imdb_url**: IMDB URL (optional, can be used instead of title for poster lookup)
+      - **imdb_url**: IMDB URL (required if `title` not provided, can be used instead of title/year for poster lookup)
   - **answer** (required): The answer section
     - **caption**: Actor/actress name
     - **image_path**: Path to actor headshot (optional, will auto-fetch from TMDB if not provided)
@@ -246,6 +246,54 @@ fetch('/create_tiktok_video', {
 })
 ```
 
+**Example Request (Using IMDB URLs Only - No Titles Required):**
+```javascript
+fetch('/create_tiktok_video', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    manifest: {
+      first_hint: {
+        caption: "Hard Level\\nHints",
+        movies: [
+          {
+            imdb_url: "https://www.imdb.com/title/tt0109830/"  // Forrest Gump
+          },
+          {
+            imdb_url: "https://www.imdb.com/title/tt0120689/"  // The Green Mile
+          },
+          {
+            imdb_url: "https://www.imdb.com/title/tt0162222/"  // Cast Away
+          }
+        ]
+      },
+      second_hint: {
+        caption: "Medium Level\\nHints",
+        movies: [
+          { imdb_url: "https://www.imdb.com/title/tt0114709/" },  // Toy Story
+          { imdb_url: "https://www.imdb.com/title/tt0120815/" },  // Saving Private Ryan
+          { imdb_url: "https://www.imdb.com/title/tt0114709/" }   // Toy Story 2
+        ]
+      },
+      third_hint: {
+        caption: "Easy Level\\nHints",
+        movies: [
+          { imdb_url: "https://www.imdb.com/title/tt0096874/" },  // Big
+          { imdb_url: "https://www.imdb.com/title/tt0104694/" },  // A League of Their Own
+          { imdb_url: "https://www.imdb.com/title/tt0362227/" }   // The Terminal
+        ]
+      },
+      answer: {
+        caption: "Tom Hanks"
+      }
+    },
+    output_filename: "tom_hanks_imdb_video.mp4"
+  })
+})
+```
+
 **Example Request (With Backblaze B2 Upload):**
 ```javascript
 fetch('/create_tiktok_video', {
@@ -282,6 +330,243 @@ fetch('/create_tiktok_video', {
     console.log('Local file deleted:', data.local_deleted);
   }
 })
+```
+
+---
+
+#### POST `/generate_manifest`
+
+Generates a complete manifest from an actor's name using the ActorMovieRecommender. Returns a manifest structure that can be directly sent to the `/create_tiktok_video` endpoint.
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body Schema:**
+```json
+{
+  "actor_name": "string (required)",
+  "hint_captions": ["string", "string", "string"] (optional),
+  "background_audio": "string (optional)",
+  "background_video": "string (optional)",
+  "tmdb_api_key": "string (optional)",
+  "omdb_api_key": "string (optional)"
+}
+```
+
+**Request Body Field Descriptions:**
+- **actor_name** (required): The name of the actor/actress to generate the manifest for
+- **hint_captions** (optional): Array of 3 caption strings for the hint levels (defaults to "Hard/Medium/Easy Level Hints")
+- **background_audio** (optional): Path to background audio file (defaults to 'assets/background_audio.mp3')
+- **background_video** (optional): Path to background video file (defaults to 'assets/background_video.mp4')
+- **tmdb_api_key** (optional): TMDB API key for fetching movies (can use env var)
+- **omdb_api_key** (optional): OMDB API key for poster downloads (can use env var)
+- **b2_application_key_id** (optional): Backblaze B2 credentials to include in response
+- **b2_application_key** (optional): Backblaze B2 credentials to include in response
+- **b2_bucket_name** (optional): Backblaze B2 bucket name to include in response
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Manifest generated successfully for Tom Hanks",
+  "actor_name": "Tom Hanks",
+  "total_movies_found": 171,
+  "manifest": {
+    "first_hint": {
+      "caption": "Hard Level\nHints",
+      "movies": [
+        {
+          "title": "Forrest Gump",
+          "release_year": "1994"
+        },
+        {
+          "title": "Killing Lincoln",
+          "release_year": "2013"
+        },
+        {
+          "title": "Who Killed the Electric Car?",
+          "release_year": "2006"
+        }
+      ]
+    },
+    "second_hint": {
+      "caption": "Medium Level\nHints",
+      "movies": [ /* 3 more movies */ ]
+    },
+    "third_hint": {
+      "caption": "Easy Level\nHints",
+      "movies": [ /* 3 more movies */ ]
+    },
+    "answer": {
+      "caption": "Tom Hanks"
+    },
+    "background_audio": "assets/background_audio.mp3",
+    "background_video": "assets/background_video.mp4",
+    "omdb_api_key": "your_key_if_provided",
+    "tmdb_api_key": "your_key_if_provided"
+  },
+  "movie_details": [
+    {
+      "title": "Forrest Gump",
+      "release_year": "1994",
+      "character": "Forrest Gump",
+      "cast_order": 0,
+      "popularity": 81.0362,
+      "vote_average": 8.464,
+      "movie_id": 13,
+      "overview": "A man with a low IQ..."
+    }
+    /* ... 8 more movies with full details */
+  ],
+  "video_creation_payload": {
+    "manifest": { /* same as above */ },
+    "upload_to_b2": true,
+    "delete_local_after_upload": true,
+    "output_filename": "tom_hanks_video.mp4"
+  }
+}
+```
+
+**Error Response - Actor Not Found (404):**
+```json
+{
+  "success": false,
+  "message": "Actor not found: Unknown Actor"
+}
+```
+
+**Error Response - Not Enough Movies (400):**
+```json
+{
+  "success": false,
+  "message": "Not enough movies found for Actor Name. Found 5, need 9.",
+  "movies_found": 5
+}
+```
+
+**Error Response - Processing Error (500):**
+```json
+{
+  "success": false,
+  "message": "Error generating manifest: [error message]",
+  "errors": "[detailed traceback]"
+}
+```
+
+**Example Request (Simple - Using video_creation_payload):**
+```javascript
+// Step 1: Generate manifest from actor name
+fetch('/generate_manifest', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    actor_name: "Denzel Washington"
+  })
+})
+.then(response => response.json())
+.then(data => {
+  console.log('Manifest generated:', data.manifest);
+
+  // Step 2: Use the ready-made video_creation_payload
+  return fetch('/create_tiktok_video', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data.video_creation_payload)  // ✨ Already includes upload_to_b2 and delete_local_after_upload!
+  });
+})
+.then(response => response.json())
+.then(data => {
+  console.log('Video created:', data.b2_url);
+});
+```
+
+**Example Request (Custom Configuration):**
+```javascript
+// Step 1: Generate manifest from actor name
+fetch('/generate_manifest', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    actor_name: "Denzel Washington",
+    hint_captions: [
+      "Cinephile\nLevel\nHints",
+      "Casual\nViewer\nHints",
+      "Everyone\nKnows\nThese"
+    ]
+  })
+})
+.then(response => response.json())
+.then(data => {
+  console.log('Manifest generated:', data.manifest);
+
+  // Step 2: Use the manifest to create a video (manual configuration)
+  return fetch('/create_tiktok_video', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      manifest: data.manifest,
+      output_filename: "denzel_video.mp4",
+      upload_to_b2: true,
+      delete_local_after_upload: true
+    })
+  });
+})
+.then(response => response.json())
+.then(data => {
+  console.log('Video created:', data.b2_url);
+});
+```
+
+**Complete Workflow Example (Python - Simple):**
+```python
+import requests
+
+# Step 1: Generate manifest
+response = requests.post('http://localhost:8080/generate_manifest', json={
+    'actor_name': 'Tom Hanks'
+})
+manifest_data = response.json()
+
+# Step 2: Create video with ready-made payload (already has upload_to_b2=True)
+response = requests.post('http://localhost:8080/create_tiktok_video',
+    json=manifest_data['video_creation_payload']  # ✨ Use ready-made payload
+)
+result = response.json()
+
+print(f"Video URL: {result['b2_url']}")
+```
+
+**Complete Workflow Example (Python - Custom):**
+```python
+import requests
+
+# Step 1: Generate manifest
+response = requests.post('http://localhost:8080/generate_manifest', json={
+    'actor_name': 'Tom Hanks'
+})
+manifest_data = response.json()
+manifest = manifest_data['manifest']
+
+# Step 2: Create video with custom configuration
+response = requests.post('http://localhost:8080/create_tiktok_video', json={
+    'manifest': manifest,
+    'output_filename': 'tom_hanks_video.mp4',
+    'upload_to_b2': True,
+    'delete_local_after_upload': True
+})
+result = response.json()
+
+print(f"Video URL: {result['b2_url']}")
 ```
 
 ---

@@ -98,7 +98,13 @@ class OMDBClient:
                 return self.download_movie_poster_by_imdb_id(imdb_id, save_path)
             else:
                 print(f"Warning: Could not extract IMDB ID from URL: {imdb_url}")
+                if not movie_title:
+                    raise ValueError(f"Could not extract IMDB ID from URL and no movie title provided: {imdb_url}")
                 print("Falling back to title/year search")
+
+        # Ensure we have a movie title for the search
+        if not movie_title:
+            raise ValueError("Either movie_title or a valid imdb_url must be provided")
 
         print(f"Searching for movie: {movie_title}")
         # Query OMDb for the movie

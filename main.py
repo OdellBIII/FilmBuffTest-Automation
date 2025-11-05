@@ -314,22 +314,37 @@ def create_tiktok_from_json(json_file_path, output_video_path="output_column_ani
             raise ValueError("Each caption must have exactly 3 movie data entries")
 
         movies = []
-        # Check that each movie datum is a dict with 'title' and optional 'poster_path'
+        # Check that each movie datum is a dict with 'title' OR 'imdb_url'
         # If 'poster_path' is missing, use OMDBClient to download the poster
         for movie_datum in movie_data:
-            if not isinstance(movie_datum, dict) or "title" not in movie_datum:
-                raise ValueError("Each movie data entry must be a dictionary with at least a 'title' key")
-            title = movie_datum["title"]
+            if not isinstance(movie_datum, dict):
+                raise ValueError("Each movie data entry must be a dictionary")
+
+            title = movie_datum.get("title")
+            imdb_url = movie_datum.get("imdb_url")
             poster_path = movie_datum.get("poster_path")
             release_year = movie_datum.get("release_year")
-            imdb_url = movie_datum.get("imdb_url")
+
+            # Validate: must have either title or imdb_url
+            if not title and not imdb_url:
+                raise ValueError("Each movie data entry must have either a 'title' or 'imdb_url' field")
+
+            # If no poster_path, download from OMDB
             if not poster_path:
                 try:
-                    normalized_title = title.lower().replace(" ", "_").replace(":", "").replace("-", "_")
-                    poster_path = resource_path(f"assets/{normalized_title}.jpg")
+                    # Generate a normalized filename
+                    if title:
+                        normalized_name = title.lower().replace(" ", "_").replace(":", "").replace("-", "_")
+                    else:
+                        # Extract IMDB ID from URL for filename
+                        imdb_id = imdb_url.split("/")[-2] if "/" in imdb_url else "movie"
+                        normalized_name = f"imdb_{imdb_id}"
+
+                    poster_path = resource_path(f"assets/{normalized_name}.jpg")
                     poster_path = omdb_client.download_movie_poster(title, save_path=poster_path, release_year=release_year, imdb_url=imdb_url)
                 except Exception as e:
-                    print(f"Error downloading poster for '{title}': {e}")
+                    error_identifier = title if title else imdb_url
+                    print(f"Error downloading poster for '{error_identifier}': {e}")
                     poster_path = resource_path("input/img/placeholder.jpg")
 
             movies.append(Movie(title=title, poster_path=poster_path, release_year=release_year, imdb_url=imdb_url))
