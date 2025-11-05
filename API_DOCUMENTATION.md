@@ -104,7 +104,12 @@ Content-Type: application/json
     "tmdb_api_key": "string (optional, can also use GTA_TMDB_API_KEY env var)"
   },
   "output_path": "string (optional, defaults to '.')",
-  "output_filename": "string (optional, defaults to 'output_video.mp4')"
+  "output_filename": "string (optional, defaults to 'output_video.mp4')",
+  "upload_to_b2": "boolean (optional, defaults to false) - Upload video to Backblaze B2",
+  "delete_local_after_upload": "boolean (optional, defaults to true) - Delete local file after B2 upload",
+  "b2_application_key_id": "string (optional, can also use B2_APPLICATION_KEY_ID env var)",
+  "b2_application_key": "string (optional, can also use B2_APPLICATION_KEY env var)",
+  "b2_bucket_name": "string (optional, can also use B2_BUCKET_NAME env var)"
 }
 ```
 
@@ -127,14 +132,46 @@ Content-Type: application/json
   - **tmdb_api_key**: TMDB API key for actor headshot downloads (optional if env var set)
 - **output_path**: Directory where the video will be saved (optional, defaults to current directory)
 - **output_filename**: Name of the output video file (optional, defaults to 'output_video.mp4')
+- **upload_to_b2**: Enable automatic upload to Backblaze B2 cloud storage (optional, defaults to false)
+- **delete_local_after_upload**: Delete local video file after successful B2 upload (optional, defaults to true)
+- **b2_application_key_id**: Backblaze B2 application key ID (optional if B2_APPLICATION_KEY_ID env var set)
+- **b2_application_key**: Backblaze B2 application key (optional if B2_APPLICATION_KEY env var set)
+- **b2_bucket_name**: Backblaze B2 bucket name (optional if B2_BUCKET_NAME env var set)
 
-**Success Response (200):**
+**Success Response (200) - Without B2 Upload:**
 ```json
 {
   "success": true,
   "message": "TikTok video created successfully!",
   "output_path": "/full/path/to/output_video.mp4",
   "output": "Video saved to: /full/path/to/output_video.mp4"
+}
+```
+
+**Success Response (200) - With B2 Upload:**
+```json
+{
+  "success": true,
+  "message": "TikTok video created and uploaded to B2! Local file deleted.",
+  "output_path": "/full/path/to/output_video.mp4",
+  "output": "Video saved to: /full/path/to/output_video.mp4",
+  "uploaded_to_b2": true,
+  "b2_url": "https://f005.backblazeb2.com/file/my-bucket/output_video.mp4",
+  "b2_file_id": "4_z123456789abcdef_f987654321fedcba_d20231104_m123456_c005_v0001234_t0012",
+  "b2_file_name": "output_video.mp4",
+  "local_deleted": true
+}
+```
+
+**Success Response (200) - With B2 Upload Failure:**
+```json
+{
+  "success": true,
+  "message": "TikTok video created successfully!",
+  "output_path": "/full/path/to/output_video.mp4",
+  "output": "Video saved to: /full/path/to/output_video.mp4",
+  "upload_to_b2_failed": true,
+  "upload_error": "B2 credentials must be provided"
 }
 ```
 
@@ -155,7 +192,7 @@ Content-Type: application/json
 }
 ```
 
-**Example Request:**
+**Example Request (Basic):**
 ```javascript
 fetch('/create_tiktok_video', {
   method: 'POST',
@@ -206,6 +243,44 @@ fetch('/create_tiktok_video', {
     output_path: ".",
     output_filename: "tom_hanks_video.mp4"
   })
+})
+```
+
+**Example Request (With Backblaze B2 Upload):**
+```javascript
+fetch('/create_tiktok_video', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    manifest: {
+      first_hint: { /* ... */ },
+      second_hint: { /* ... */ },
+      third_hint: { /* ... */ },
+      answer: {
+        caption: "Tom Hanks"
+      },
+      omdb_api_key: "your_omdb_key_here",
+      tmdb_api_key: "your_tmdb_key_here"
+    },
+    output_path: ".",
+    output_filename: "tom_hanks_video.mp4",
+    // Backblaze B2 configuration
+    upload_to_b2: true,
+    delete_local_after_upload: true,
+    b2_application_key_id: "your_b2_key_id",
+    b2_application_key: "your_b2_key",
+    b2_bucket_name: "my-tiktok-videos"
+  })
+})
+.then(response => response.json())
+.then(data => {
+  if (data.uploaded_to_b2) {
+    console.log('Video uploaded to B2!');
+    console.log('Download URL:', data.b2_url);
+    console.log('Local file deleted:', data.local_deleted);
+  }
 })
 ```
 

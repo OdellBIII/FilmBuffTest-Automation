@@ -53,6 +53,8 @@ def create_tiktok_video():
         manifest = data.get('manifest')
         output_path = data.get('output_path', '.')
         output_filename = data.get('output_filename', 'output_video.mp4')
+        upload_to_b2 = data.get('upload_to_b2', False)
+        delete_local_after_upload = data.get('delete_local_after_upload', True)
 
         if not manifest:
             return jsonify({
@@ -71,6 +73,14 @@ def create_tiktok_video():
                 os.environ['GTA_OMDB_API_KEY'] = manifest['omdb_api_key']
             if 'tmdb_api_key' in manifest:
                 os.environ['GTA_TMDB_API_KEY'] = manifest['tmdb_api_key']
+
+            # Set B2 credentials from data if provided
+            if 'b2_application_key_id' in data:
+                os.environ['B2_APPLICATION_KEY_ID'] = data['b2_application_key_id']
+            if 'b2_application_key' in data:
+                os.environ['B2_APPLICATION_KEY'] = data['b2_application_key']
+            if 'b2_bucket_name' in data:
+                os.environ['B2_BUCKET_NAME'] = data['b2_bucket_name']
 
             # Import and run the create_tiktok_from_json function directly
             # Add the bundle directory to Python path
@@ -91,19 +101,39 @@ def create_tiktok_video():
             os.makedirs(output_dir, exist_ok=True)
 
             # Call the function directly
-            create_tiktok_from_json(
+            result = create_tiktok_from_json(
                 json_file_path=temp_manifest_path,
                 output_video_path=full_output_path,
                 video_size=(1080, 1920),
-                fps=30
+                fps=30,
+                upload_to_b2=upload_to_b2,
+                delete_local_after_upload=delete_local_after_upload
             )
 
-            return jsonify({
+            # Build response based on result
+            response = {
                 'success': True,
                 'message': 'TikTok video created successfully!',
                 'output_path': full_output_path,
                 'output': f'Video saved to: {full_output_path}'
-            })
+            }
+
+            # Add B2 upload information if uploaded
+            if result.get('uploaded_to_b2'):
+                response['uploaded_to_b2'] = True
+                response['b2_url'] = result.get('b2_url')
+                response['b2_file_id'] = result.get('b2_file_id')
+                response['b2_file_name'] = result.get('b2_file_name')
+                response['local_deleted'] = result.get('local_deleted', False)
+                if result.get('local_deleted'):
+                    response['message'] = 'TikTok video created and uploaded to B2! Local file deleted.'
+                else:
+                    response['message'] = 'TikTok video created and uploaded to B2!'
+            elif 'upload_error' in result:
+                response['upload_to_b2_failed'] = True
+                response['upload_error'] = result['upload_error']
+
+            return jsonify(response)
 
         finally:
             # Clean up temporary file
