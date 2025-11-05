@@ -150,6 +150,169 @@ def create_tiktok_video():
             'errors': error_details
         }), 500
 
+@app.route('/generate_manifest', methods=['POST'])
+def generate_manifest():
+    """
+    Generate a manifest from an actor's name using ActorMovieRecommender.
+    Returns a manifest structure ready to be used with /create_tiktok_video endpoint.
+    """
+    try:
+        data = request.json
+        actor_name = data.get('actor_name')
+
+        if not actor_name:
+            return jsonify({
+                'success': False,
+                'message': 'Actor name is required'
+            }), 400
+
+        # Optional parameters
+        background_audio = data.get('background_audio', 'assets/background_audio.mp3')
+        background_video = data.get('background_video', 'assets/background_video.mp4')
+        hint_captions = data.get('hint_captions', [
+            "Hard Level\nHints",
+            "Medium Level\nHints",
+            "Easy Level\nHints"
+        ])
+
+        # Set TMDB API key if provided in request
+        if 'tmdb_api_key' in data:
+            os.environ['GTA_TMDB_API_KEY'] = data['tmdb_api_key']
+
+        # Import ActorMovieRecommender
+        bundle_dir = resource_path('')
+        if bundle_dir not in sys.path:
+            sys.path.insert(0, bundle_dir)
+
+        from clients.ActorMovieRecommender import ActorMovieRecommender
+
+        # Get top 9 movies for the actor
+        print(f"🎬 Fetching top movies for: {actor_name}")
+        recommender = ActorMovieRecommender()
+        movies_json_str = recommender.get_actor_top_movies(actor_name, limit=9)
+        movies_data = json.loads(movies_json_str)
+
+        # Split movies into 3 groups of 3 (sorted by popularity already)
+        all_movies = movies_data['movies']
+
+        if len(all_movies) < 9:
+            return jsonify({
+                'success': False,
+                'message': f'Not enough movies found for {actor_name}. Found {len(all_movies)}, need 9.',
+                'movies_found': len(all_movies)
+            }), 400
+
+        # Create manifest structure
+        # Most popular movies (hardest hint) go first
+        manifest = {
+            'first_hint': {
+                'caption': hint_captions[0],
+                'movies': [
+                    {
+                        'title': all_movies[0]['title'],
+                        'release_year': all_movies[0]['release_year']
+                    },
+                    {
+                        'title': all_movies[1]['title'],
+                        'release_year': all_movies[1]['release_year']
+                    },
+                    {
+                        'title': all_movies[2]['title'],
+                        'release_year': all_movies[2]['release_year']
+                    }
+                ]
+            },
+            'second_hint': {
+                'caption': hint_captions[1],
+                'movies': [
+                    {
+                        'title': all_movies[3]['title'],
+                        'release_year': all_movies[3]['release_year']
+                    },
+                    {
+                        'title': all_movies[4]['title'],
+                        'release_year': all_movies[4]['release_year']
+                    },
+                    {
+                        'title': all_movies[5]['title'],
+                        'release_year': all_movies[5]['release_year']
+                    }
+                ]
+            },
+            'third_hint': {
+                'caption': hint_captions[2],
+                'movies': [
+                    {
+                        'title': all_movies[6]['title'],
+                        'release_year': all_movies[6]['release_year']
+                    },
+                    {
+                        'title': all_movies[7]['title'],
+                        'release_year': all_movies[7]['release_year']
+                    },
+                    {
+                        'title': all_movies[8]['title'],
+                        'release_year': all_movies[8]['release_year']
+                    }
+                ]
+            },
+            'answer': {
+                'caption': actor_name
+            },
+            'background_audio': background_audio,
+            'background_video': background_video
+        }
+
+        # Add API keys to manifest if provided
+        if 'omdb_api_key' in data:
+            manifest['omdb_api_key'] = data['omdb_api_key']
+        if 'tmdb_api_key' in data:
+            manifest['tmdb_api_key'] = data['tmdb_api_key']
+
+        print(f"✅ Generated manifest with {len(all_movies)} movies")
+
+        # Create complete payload ready for /create_tiktok_video endpoint
+        video_creation_payload = {
+            'manifest': manifest,
+            'upload_to_b2': True,
+            'delete_local_after_upload': True,
+            'output_filename': f"{actor_name.lower().replace(' ', '_')}_video.mp4"
+        }
+
+        # Add B2 credentials to payload if provided
+        if 'b2_application_key_id' in data:
+            video_creation_payload['b2_application_key_id'] = data['b2_application_key_id']
+        if 'b2_application_key' in data:
+            video_creation_payload['b2_application_key'] = data['b2_application_key']
+        if 'b2_bucket_name' in data:
+            video_creation_payload['b2_bucket_name'] = data['b2_bucket_name']
+
+        return jsonify({
+            'success': True,
+            'message': f'Manifest generated successfully for {actor_name}',
+            'actor_name': actor_name,
+            'total_movies_found': movies_data['total_movies_found'],
+            'manifest': manifest,
+            'movie_details': all_movies,  # Include full movie details for reference
+            'video_creation_payload': video_creation_payload  # Ready-to-use payload
+        })
+
+    except ValueError as ve:
+        return jsonify({
+            'success': False,
+            'message': str(ve)
+        }), 404
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+
+        return jsonify({
+            'success': False,
+            'message': f'Error generating manifest: {str(e)}',
+            'errors': error_details
+        }), 500
+
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     """Gracefully shutdown the Flask server"""
