@@ -287,15 +287,8 @@ def generate_manifest():
         if 'b2_bucket_name' in data:
             video_creation_payload['b2_bucket_name'] = data['b2_bucket_name']
 
-        return jsonify({
-            'success': True,
-            'message': f'Manifest generated successfully for {actor_name}',
-            'actor_name': actor_name,
-            'total_movies_found': movies_data['total_movies_found'],
-            'manifest': manifest,
-            'movie_details': all_movies,  # Include full movie details for reference
-            'video_creation_payload': video_creation_payload  # Ready-to-use payload
-        })
+        # Return the video creation payload directly - ready to send to /create_tiktok_video
+        return jsonify(video_creation_payload)
 
     except ValueError as ve:
         return jsonify({

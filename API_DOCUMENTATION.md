@@ -367,12 +367,11 @@ Content-Type: application/json
 - **b2_bucket_name** (optional): Backblaze B2 bucket name to include in response
 
 **Success Response (200):**
+
+The response is a ready-to-use payload that can be directly sent to `/create_tiktok_video`:
+
 ```json
 {
-  "success": true,
-  "message": "Manifest generated successfully for Tom Hanks",
-  "actor_name": "Tom Hanks",
-  "total_movies_found": 171,
   "manifest": {
     "first_hint": {
       "caption": "Hard Level\nHints",
@@ -407,25 +406,12 @@ Content-Type: application/json
     "omdb_api_key": "your_key_if_provided",
     "tmdb_api_key": "your_key_if_provided"
   },
-  "movie_details": [
-    {
-      "title": "Forrest Gump",
-      "release_year": "1994",
-      "character": "Forrest Gump",
-      "cast_order": 0,
-      "popularity": 81.0362,
-      "vote_average": 8.464,
-      "movie_id": 13,
-      "overview": "A man with a low IQ..."
-    }
-    /* ... 8 more movies with full details */
-  ],
-  "video_creation_payload": {
-    "manifest": { /* same as above */ },
-    "upload_to_b2": true,
-    "delete_local_after_upload": true,
-    "output_filename": "tom_hanks_video.mp4"
-  }
+  "upload_to_b2": true,
+  "delete_local_after_upload": true,
+  "output_filename": "tom_hanks_video.mp4",
+  "b2_application_key_id": "your_b2_key_if_provided",
+  "b2_application_key": "your_b2_key_if_provided",
+  "b2_bucket_name": "your_bucket_if_provided"
 }
 ```
 
@@ -455,7 +441,7 @@ Content-Type: application/json
 }
 ```
 
-**Example Request (Simple - Using video_creation_payload):**
+**Example Request (Simple - Direct passthrough):**
 ```javascript
 // Step 1: Generate manifest from actor name
 fetch('/generate_manifest', {
@@ -468,16 +454,15 @@ fetch('/generate_manifest', {
   })
 })
 .then(response => response.json())
-.then(data => {
-  console.log('Manifest generated:', data.manifest);
-
-  // Step 2: Use the ready-made video_creation_payload
+.then(payload => {
+  // Step 2: Send response directly to create_tiktok_video
+  // No need to extract anything - the entire response is ready to use!
   return fetch('/create_tiktok_video', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(data.video_creation_payload)  // ✨ Already includes upload_to_b2 and delete_local_after_upload!
+    body: JSON.stringify(payload)  // ✨ Direct passthrough!
   });
 })
 .then(response => response.json())
@@ -504,26 +489,23 @@ fetch('/generate_manifest', {
   })
 })
 .then(response => response.json())
-.then(data => {
-  console.log('Manifest generated:', data.manifest);
+.then(payload => {
+  // Customize the payload if needed
+  payload.output_filename = "denzel_custom_video.mp4";
+  payload.upload_to_b2 = false;  // Save locally instead
 
-  // Step 2: Use the manifest to create a video (manual configuration)
+  // Step 2: Create video with customized payload
   return fetch('/create_tiktok_video', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      manifest: data.manifest,
-      output_filename: "denzel_video.mp4",
-      upload_to_b2: true,
-      delete_local_after_upload: true
-    })
+    body: JSON.stringify(payload)
   });
 })
 .then(response => response.json())
 .then(data => {
-  console.log('Video created:', data.b2_url);
+  console.log('Video created:', data.output_path);
 });
 ```
 
@@ -535,12 +517,10 @@ import requests
 response = requests.post('http://localhost:8080/generate_manifest', json={
     'actor_name': 'Tom Hanks'
 })
-manifest_data = response.json()
+payload = response.json()
 
-# Step 2: Create video with ready-made payload (already has upload_to_b2=True)
-response = requests.post('http://localhost:8080/create_tiktok_video',
-    json=manifest_data['video_creation_payload']  # ✨ Use ready-made payload
-)
+# Step 2: Send response directly to create video (already has upload_to_b2=True)
+response = requests.post('http://localhost:8080/create_tiktok_video', json=payload)
 result = response.json()
 
 print(f"Video URL: {result['b2_url']}")
@@ -554,19 +534,16 @@ import requests
 response = requests.post('http://localhost:8080/generate_manifest', json={
     'actor_name': 'Tom Hanks'
 })
-manifest_data = response.json()
-manifest = manifest_data['manifest']
+payload = response.json()
 
-# Step 2: Create video with custom configuration
-response = requests.post('http://localhost:8080/create_tiktok_video', json={
-    'manifest': manifest,
-    'output_filename': 'tom_hanks_video.mp4',
-    'upload_to_b2': True,
-    'delete_local_after_upload': True
-})
+# Step 2: Customize the payload before sending
+payload['output_filename'] = 'custom_tom_hanks.mp4'
+payload['upload_to_b2'] = False  # Save locally instead
+
+response = requests.post('http://localhost:8080/create_tiktok_video', json=payload)
 result = response.json()
 
-print(f"Video URL: {result['b2_url']}")
+print(f"Video saved to: {result['output_path']}")
 ```
 
 ---
